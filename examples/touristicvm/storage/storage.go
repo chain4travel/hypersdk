@@ -56,7 +56,7 @@ const (
 const (
 	BalanceChunks uint16 = 1
 	AssetChunks   uint16 = 5
-	NFTChunks     uint16 = 10
+	NFTChunks     uint16 = 5
 )
 
 var (
@@ -287,11 +287,12 @@ func AssetKey(asset ids.ID) (k []byte) {
 }
 
 // [nftPrefix] + [nftID]
-func NFTKey(nftID ids.ID) []byte {
-	k := make([]byte, 1+consts.IDLen)
+func NFTKey(nftID ids.ID) (k []byte) {
+	k = make([]byte, 1+consts.IDLen+consts.Uint16Len)
 	k[0] = nftPrefix
 	copy(k[1:], nftID[:])
-	return k
+	binary.BigEndian.PutUint16(k[1+consts.IDLen:], NFTChunks)
+	return
 }
 func GetNFT(
 	ctx context.Context,
