@@ -139,7 +139,7 @@ func (*Handler) PromptInt(
 			if err != nil {
 				return err
 			}
-			if amount <= 0 {
+			if amount < 0 {
 				return fmt.Errorf("%d must be > 0", amount)
 			}
 			if amount > max {

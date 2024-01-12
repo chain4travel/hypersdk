@@ -5,17 +5,16 @@ package rpc
 
 import (
 	"context"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/storage"
 	"strings"
 	"sync"
 
 	"github.com/ava-labs/avalanchego/ids"
 
 	"github.com/ava-labs/hypersdk/chain"
-	"github.com/ava-labs/hypersdk/examples/tokenvm/consts"
-	"github.com/ava-labs/hypersdk/examples/tokenvm/genesis"
-	"github.com/ava-labs/hypersdk/examples/tokenvm/orderbook"
-	_ "github.com/ava-labs/hypersdk/examples/tokenvm/registry" // ensure registry populated
+	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
+	"github.com/ava-labs/hypersdk/examples/touristicvm/genesis"
+	_ "github.com/ava-labs/hypersdk/examples/touristicvm/registry" // ensure registry populated
+	"github.com/ava-labs/hypersdk/examples/touristicvm/storage"
 	"github.com/ava-labs/hypersdk/requester"
 	"github.com/ava-labs/hypersdk/rpc"
 	"github.com/ava-labs/hypersdk/utils"
@@ -24,11 +23,13 @@ import (
 type JSONRPCClient struct {
 	requester *requester.EndpointRequester
 
-	networkID uint32
-	chainID   ids.ID
-	g         *genesis.Genesis
-	assetsL   sync.Mutex
-	assets    map[ids.ID]*AssetReply
+	networkID  uint32
+	chainID    ids.ID
+	g          *genesis.Genesis
+	assetsLock sync.Mutex
+	assets     map[ids.ID]*AssetReply
+	nftLock    sync.Mutex
+	nfts       map[ids.ID]*NFTReply
 }
 
 // New creates a new client object.
@@ -40,6 +41,7 @@ func NewJSONRPCClient(uri string, networkID uint32, chainID ids.ID) *JSONRPCClie
 		requester: req,
 		networkID: networkID,
 		chainID:   chainID,
+		g:         nil,
 		assets:    map[ids.ID]*AssetReply{},
 	}
 }
@@ -86,12 +88,12 @@ func (cli *JSONRPCClient) Asset(
 	ctx context.Context,
 	asset ids.ID,
 	useCache bool,
-) (bool, []byte, uint8, []byte, uint64, string, bool, error) {
-	cli.assetsL.Lock()
+) (bool, []byte, uint8, []byte, uint64, uint64, string, bool, error) {
+	cli.assetsLock.Lock()
 	r, ok := cli.assets[asset]
-	cli.assetsL.Unlock()
+	cli.assetsLock.Unlock()
 	if ok && useCache {
-		return true, r.Symbol, r.Decimals, r.Metadata, r.Supply, r.Owner, r.Warp, nil
+		return true, r.Symbol, r.Decimals, r.Metadata, r.Supply, r.MaxSupply, r.Owner, r.Warp, nil
 	}
 	resp := new(AssetReply)
 	err := cli.requester.SendRequest(
@@ -106,14 +108,14 @@ func (cli *JSONRPCClient) Asset(
 	// We use string parsing here because the JSON-RPC library we use may not
 	// allows us to perform errors.Is.
 	case err != nil && strings.Contains(err.Error(), ErrAssetNotFound.Error()):
-		return false, nil, 0, nil, 0, "", false, nil
+		return false, nil, 0, nil, 0, 0, "", false, nil
 	case err != nil:
-		return false, nil, 0, nil, 0, "", false, err
+		return false, nil, 0, nil, 0, 0, "", false, err
 	}
-	cli.assetsL.Lock()
+	cli.assetsLock.Lock()
 	cli.assets[asset] = resp
-	cli.assetsL.Unlock()
-	return true, resp.Symbol, resp.Decimals, resp.Metadata, resp.Supply, resp.Owner, resp.Warp, nil
+	cli.assetsLock.Unlock()
+	return true, resp.Symbol, resp.Decimals, resp.Metadata, resp.Supply, resp.MaxSupply, resp.Owner, resp.Warp, nil
 }
 func (cli *JSONRPCClient) Balance(ctx context.Context, addr string) (uint64, error) {
 	resp := new(BalanceReply)
@@ -128,48 +130,38 @@ func (cli *JSONRPCClient) Balance(ctx context.Context, addr string) (uint64, err
 	return resp.Amount, err
 }
 
-func (cli *JSONRPCClient) Orders(ctx context.Context, pair string) ([]*orderbook.Order, error) {
-	resp := new(OrdersReply)
-	err := cli.requester.SendRequest(
-		ctx,
-		"orders",
-		&OrdersArgs{
-			Pair: pair,
-		},
-		resp,
-	)
-	return resp.Orders, err
-}
-
-func (cli *JSONRPCClient) GetOrder(ctx context.Context, orderID ids.ID) (*orderbook.Order, error) {
-	resp := new(GetOrderReply)
-	err := cli.requester.SendRequest(
-		ctx,
-		"getOrder",
-		&GetOrderArgs{
-			OrderID: orderID,
-		},
-		resp,
-	)
-	return resp.Order, err
-}
-
-func (cli *JSONRPCClient) Loan(
+func (cli *JSONRPCClient) NFT(
 	ctx context.Context,
-	asset ids.ID,
-	destination ids.ID,
-) (uint64, error) {
-	resp := new(LoanReply)
+	nftID ids.ID,
+	useCache bool,
+) (bool, []byte, []byte, string, []byte, error) {
+	cli.nftLock.Lock()
+	r, ok := cli.nfts[nftID]
+	cli.nftLock.Unlock()
+	if ok && useCache {
+		return true, r.Symbol, r.Metadata, r.Owner, r.Url, nil
+	}
+	resp := new(NFTReply)
 	err := cli.requester.SendRequest(
 		ctx,
-		"loan",
-		&LoanArgs{
-			Asset:       asset,
-			Destination: destination,
+		"nft",
+		&NFTArgs{
+			Id: nftID,
 		},
 		resp,
 	)
-	return resp.Amount, err
+	switch {
+	// We use string parsing here because the JSON-RPC library we use may not
+	// allows us to perform errors.Is.
+	case err != nil && strings.Contains(err.Error(), ErrAssetNotFound.Error()):
+		return false, nil, nil, "", nil, nil
+	case err != nil:
+		return false, nil, nil, "", nil, err
+	}
+	cli.nftLock.Lock()
+	cli.nfts[nftID] = resp
+	cli.nftLock.Unlock()
+	return true, resp.Symbol, resp.Metadata, resp.Owner, resp.Url, nil
 }
 
 func (cli *JSONRPCClient) WaitForBalance(

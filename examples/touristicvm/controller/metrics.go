@@ -1,0 +1,45 @@
+// Copyright (C) 2023, Ava Labs, Inc. All rights reserved.
+// See the file LICENSE for licensing terms.
+
+package controller
+
+import (
+	ametrics "github.com/ava-labs/avalanchego/api/metrics"
+	"github.com/ava-labs/avalanchego/utils/wrappers"
+	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+type metrics struct {
+	transfer    prometheus.Counter
+	createAsset prometheus.Counter
+	mintAsset   prometheus.Counter
+}
+
+func newMetrics(gatherer ametrics.MultiGatherer) (*metrics, error) {
+	m := &metrics{
+		transfer: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "transfer",
+			Help:      "number of transfer actions",
+		}),
+		createAsset: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "create_asset",
+			Help:      "number of create asset actions",
+		}),
+		mintAsset: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: "actions",
+			Name:      "mint_asset",
+			Help:      "number of mint asset actions",
+		}),
+	}
+	r := prometheus.NewRegistry()
+	errs := wrappers.Errs{}
+	errs.Add(
+		r.Register(m.transfer),
+
+		gatherer.Register(consts.Name, r),
+	)
+	return m, errs.Err
+}
