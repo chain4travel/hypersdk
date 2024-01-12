@@ -297,10 +297,18 @@ func NFTKey(nftID ids.ID) (k []byte) {
 func GetNFT(
 	ctx context.Context,
 	im state.Immutable,
-	asset ids.ID,
+	id ids.ID,
 ) (bool, []byte, codec.Address, []byte, bool, error) {
-	k := NFTKey(asset)
+	k := AssetKey(id)
 	return innerGetNFT(im.GetValue(ctx, k))
+}
+func GetNFTFromState(
+	ctx context.Context,
+	f ReadState,
+	id ids.ID,
+) (bool, []byte, codec.Address, []byte, bool, error) {
+	values, errs := f(ctx, [][]byte{NFTKey(id)})
+	return innerGetNFT(values[0], errs[0])
 }
 
 func innerGetNFT(

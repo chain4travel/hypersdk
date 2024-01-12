@@ -46,3 +46,7 @@ func (c *Controller) GetBalanceFromState(
 ) (uint64, error) {
 	return storage.GetBalanceFromState(ctx, c.inner.ReadState, addr, asset)
 }
+
+func (c *Controller) GetNFTFromState(ctx context.Context, id ids.ID) (bool, []byte, codec.Address, []byte, bool, error) {
+	return storage.GetNFTFromState(ctx, c.inner.ReadState, id)
+}

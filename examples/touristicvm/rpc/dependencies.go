@@ -19,5 +19,5 @@ type Controller interface {
 	GetTransaction(context.Context, ids.ID) (bool, int64, bool, chain.Dimensions, uint64, error)
 	GetAssetFromState(context.Context, ids.ID) (bool, []byte, uint8, []byte, uint64, uint64, codec.Address, bool, error)
 	GetBalanceFromState(context.Context, codec.Address, ids.ID) (uint64, error)
-	GetNFTFromState(context.Context, ids.ID) (bool, []byte, []byte, codec.Address, []byte, error)
+	GetNFTFromState(context.Context, ids.ID) (bool, []byte, codec.Address, []byte, bool, error)
 }

@@ -135,14 +135,13 @@ func (j *JSONRPCServer) NFT(req *http.Request, args *NFTArgs, reply *NFTReply) e
 	ctx, span := j.c.Tracer().Start(req.Context(), "Server.NFT")
 	defer span.End()
 
-	exists, symbol, metadata, owner, url, err := j.c.GetNFTFromState(ctx, args.Id)
+	exists, metadata, owner, url, _, err := j.c.GetNFTFromState(ctx, args.Id)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		return ErrAssetNotFound
 	}
-	reply.Symbol = symbol
 	reply.Metadata = metadata
 	reply.Owner = codec.MustAddressBech32(consts.HRP, owner)
 	reply.Url = url

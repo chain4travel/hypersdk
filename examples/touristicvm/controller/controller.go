@@ -6,8 +6,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/hypersdk/codec"
 	"net/http"
 
 	ametrics "github.com/ava-labs/avalanchego/api/metrics"
@@ -44,11 +42,6 @@ type Controller struct {
 	metrics *metrics
 
 	metaDB database.Database
-}
-
-func (c *Controller) GetNFTFromState(ctx context.Context, id ids.ID) (bool, []byte, []byte, codec.Address, []byte, error) {
-	//TODO implement me
-	panic("implement me")
 }
 
 func New() *vm.VM {

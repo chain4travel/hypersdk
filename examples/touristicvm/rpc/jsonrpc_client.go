@@ -43,6 +43,7 @@ func NewJSONRPCClient(uri string, networkID uint32, chainID ids.ID) *JSONRPCClie
 		chainID:   chainID,
 		g:         nil,
 		assets:    map[ids.ID]*AssetReply{},
+		nfts:      map[ids.ID]*NFTReply{},
 	}
 }
 
@@ -144,7 +145,7 @@ func (cli *JSONRPCClient) NFT(
 	resp := new(NFTReply)
 	err := cli.requester.SendRequest(
 		ctx,
-		"nft",
+		"nFT",
 		&NFTArgs{
 			Id: nftID,
 		},
