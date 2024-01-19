@@ -135,12 +135,12 @@ func (cli *JSONRPCClient) NFT(
 	ctx context.Context,
 	nftID ids.ID,
 	useCache bool,
-) (bool, []byte, []byte, string, []byte, error) {
+) (bool, []byte, string, []byte, error) {
 	cli.nftLock.Lock()
 	r, ok := cli.nfts[nftID]
 	cli.nftLock.Unlock()
 	if ok && useCache {
-		return true, r.Symbol, r.Metadata, r.Owner, r.Url, nil
+		return true, r.Metadata, r.Owner, r.Url, nil
 	}
 	resp := new(NFTReply)
 	err := cli.requester.SendRequest(
@@ -155,14 +155,14 @@ func (cli *JSONRPCClient) NFT(
 	// We use string parsing here because the JSON-RPC library we use may not
 	// allows us to perform errors.Is.
 	case err != nil && strings.Contains(err.Error(), ErrAssetNotFound.Error()):
-		return false, nil, nil, "", nil, nil
+		return false, nil, "", nil, nil
 	case err != nil:
-		return false, nil, nil, "", nil, err
+		return false, nil, "", nil, err
 	}
 	cli.nftLock.Lock()
 	cli.nfts[nftID] = resp
 	cli.nftLock.Unlock()
-	return true, resp.Symbol, resp.Metadata, resp.Owner, resp.Url, nil
+	return true, resp.Metadata, resp.Owner, resp.Url, nil
 }
 
 func (cli *JSONRPCClient) WaitForBalance(

@@ -105,7 +105,7 @@ func (c *Controller) Initialize(
 
 	// Create handlers
 	//
-	// hypersdk handler are initiatlized automatically, you just need to
+	// hypersdk handler are initialized automatically, you just need to
 	// initialize custom handlers here.
 	apis := map[string]http.Handler{}
 	jsonRPCHandler, err := hrpc.NewJSONRPCHandler(
@@ -175,6 +175,14 @@ func (c *Controller) Accepted(ctx context.Context, blk *chain.StatelessBlock) er
 				c.metrics.createAsset.Inc()
 			case *actions.MintAsset:
 				c.metrics.mintAsset.Inc()
+			case *actions.CreateNFT:
+				c.metrics.createNFT.Inc()
+			case *actions.TransferNFT:
+				c.metrics.transferNFT.Inc()
+			case *actions.ImportAsset:
+				c.metrics.importAsset.Inc()
+			case *actions.ExportAsset:
+				c.metrics.exportAsset.Inc()
 			}
 		}
 	}

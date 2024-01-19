@@ -5,7 +5,7 @@ package rpc
 
 import (
 	"context"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/storage"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -115,13 +115,15 @@ func (cli *JSONRPCClient) Asset(
 	cli.assetsL.Unlock()
 	return true, resp.Symbol, resp.Decimals, resp.Metadata, resp.Supply, resp.Owner, resp.Warp, nil
 }
-func (cli *JSONRPCClient) Balance(ctx context.Context, addr string) (uint64, error) {
+
+func (cli *JSONRPCClient) Balance(ctx context.Context, addr string, asset ids.ID) (uint64, error) {
 	resp := new(BalanceReply)
 	err := cli.requester.SendRequest(
 		ctx,
 		"balance",
 		&BalanceArgs{
 			Address: addr,
+			Asset:   asset,
 		},
 		resp,
 	)
@@ -175,18 +177,28 @@ func (cli *JSONRPCClient) Loan(
 func (cli *JSONRPCClient) WaitForBalance(
 	ctx context.Context,
 	addr string,
+	asset ids.ID,
 	min uint64,
 ) error {
+	exists, symbol, decimals, _, _, _, _, err := cli.Asset(ctx, asset, true)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("%s does not exist", asset)
+	}
+
 	return rpc.Wait(ctx, func(ctx context.Context) (bool, error) {
-		balance, err := cli.Balance(ctx, addr)
+		balance, err := cli.Balance(ctx, addr, asset)
 		if err != nil {
 			return false, err
 		}
 		shouldExit := balance >= min
 		if !shouldExit {
 			utils.Outf(
-				"{{yellow}}waiting for %s balance: %s{{/}}\n",
-				utils.FormatBalance(min, consts.Decimals),
+				"{{yellow}}waiting for %s %s on %s{{/}}\n",
+				utils.FormatBalance(min, decimals),
+				symbol,
 				addr,
 			)
 		}
@@ -219,20 +231,12 @@ type Parser struct {
 	genesis   *genesis.Genesis
 }
 
-func (p *Parser) ChainID() ids.ID {
-	return p.chainID
-}
-
 func (p *Parser) Rules(t int64) chain.Rules {
 	return p.genesis.Rules(t, p.networkID, p.chainID)
 }
 
 func (*Parser) Registry() (chain.ActionRegistry, chain.AuthRegistry) {
 	return consts.ActionRegistry, consts.AuthRegistry
-}
-
-func (*Parser) StateManager() chain.StateManager {
-	return &storage.StateManager{}
 }
 
 func (cli *JSONRPCClient) Parser(ctx context.Context) (chain.Parser, error) {

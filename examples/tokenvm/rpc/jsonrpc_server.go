@@ -75,7 +75,7 @@ type AssetReply struct {
 }
 
 func (j *JSONRPCServer) Asset(req *http.Request, args *AssetArgs, reply *AssetReply) error {
-	ctx, span := j.c.Tracer().Start(req.Context(), "Server.Asset")
+	ctx, span := j.c.Tracer().Start(req.Context(), "Server.NFT")
 	defer span.End()
 
 	exists, symbol, decimals, metadata, supply, owner, warp, err := j.c.GetAssetFromState(ctx, args.Asset)

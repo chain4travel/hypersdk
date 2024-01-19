@@ -40,23 +40,25 @@ type ReadState func(context.Context, [][]byte) ([][]byte, []error)
 
 const (
 	// metaDB
-	txPrefix    = 0x0
-	assetPrefix = 0x1
-	nftPrefix   = 0x2
+	txPrefix = 0x0
 
 	// stateDB
 	balancePrefix      = 0x0
-	heightPrefix       = 0x1
-	timestampPrefix    = 0x2
-	feePrefix          = 0x3
-	incomingWarpPrefix = 0x4
-	outgoingWarpPrefix = 0x5
+	assetPrefix        = 0x1
+	nftPrefix          = 0x2
+	loanPrefix         = 0x3
+	heightPrefix       = 0x4
+	timestampPrefix    = 0x5
+	feePrefix          = 0x6
+	incomingWarpPrefix = 0x7
+	outgoingWarpPrefix = 0x8
 )
 
 const (
 	BalanceChunks uint16 = 1
 	AssetChunks   uint16 = 5
 	NFTChunks     uint16 = 5
+	LoanChunks    uint16 = 1
 )
 
 var (
@@ -299,7 +301,7 @@ func GetNFT(
 	im state.Immutable,
 	id ids.ID,
 ) (bool, []byte, codec.Address, []byte, bool, error) {
-	k := AssetKey(id)
+	k := NFTKey(id)
 	return innerGetNFT(im.GetValue(ctx, k))
 }
 func GetNFTFromState(
@@ -454,4 +456,107 @@ func SetAsset(
 func DeleteAsset(ctx context.Context, mu state.Mutable, asset ids.ID) error {
 	k := AssetKey(asset)
 	return mu.Remove(ctx, k)
+}
+
+// [loanPrefix] + [asset] + [destination]
+func LoanKey(asset ids.ID, destination ids.ID) (k []byte) {
+	k = make([]byte, 1+consts.IDLen*2+consts.Uint16Len)
+	k[0] = loanPrefix
+	copy(k[1:], asset[:])
+	copy(k[1+consts.IDLen:], destination[:])
+	binary.BigEndian.PutUint16(k[1+consts.IDLen*2:], LoanChunks)
+	return
+}
+
+// Used to serve RPC queries
+func GetLoanFromState(
+	ctx context.Context,
+	f ReadState,
+	asset ids.ID,
+	destination ids.ID,
+) (uint64, error) {
+	values, errs := f(ctx, [][]byte{LoanKey(asset, destination)})
+	return innerGetLoan(values[0], errs[0])
+}
+func innerGetLoan(v []byte, err error) (uint64, error) {
+	if errors.Is(err, database.ErrNotFound) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint64(v), nil
+}
+func GetLoan(
+	ctx context.Context,
+	im state.Immutable,
+	asset ids.ID,
+	destination ids.ID,
+) (uint64, error) {
+	k := LoanKey(asset, destination)
+	v, err := im.GetValue(ctx, k)
+	return innerGetLoan(v, err)
+}
+
+func SetLoan(
+	ctx context.Context,
+	mu state.Mutable,
+	asset ids.ID,
+	destination ids.ID,
+	amount uint64,
+) error {
+	k := LoanKey(asset, destination)
+	return mu.Insert(ctx, k, binary.BigEndian.AppendUint64(nil, amount))
+}
+func AddLoan(
+	ctx context.Context,
+	mu state.Mutable,
+	asset ids.ID,
+	destination ids.ID,
+	amount uint64,
+) error {
+	loan, err := GetLoan(ctx, mu, asset, destination)
+	if err != nil {
+		return err
+	}
+	nloan, err := smath.Add64(loan, amount)
+	if err != nil {
+		return fmt.Errorf(
+			"%w: could not add loan (asset=%s, destination=%s, amount=%d)",
+			ErrInvalidBalance,
+			asset,
+			destination,
+			amount,
+		)
+	}
+	return SetLoan(ctx, mu, asset, destination, nloan)
+}
+
+func SubLoan(
+	ctx context.Context,
+	mu state.Mutable,
+	asset ids.ID,
+	destination ids.ID,
+	amount uint64,
+) error {
+	loan, err := GetLoan(ctx, mu, asset, destination)
+	if err != nil {
+		return err
+	}
+	nloan, err := smath.Sub(loan, amount)
+	if err != nil {
+		return fmt.Errorf(
+			"%w: could not subtract loan (asset=%s, destination=%s, amount=%d)",
+			ErrInvalidBalance,
+			asset,
+			destination,
+			amount,
+		)
+	}
+	if nloan == 0 {
+		// If there is no balance left, we should delete the record instead of
+		// setting it to 0.
+		return mu.Remove(ctx, LoanKey(asset, destination))
+	}
+	return SetLoan(ctx, mu, asset, destination, nloan)
 }

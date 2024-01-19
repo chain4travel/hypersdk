@@ -28,6 +28,10 @@ func init() {
 		consts.ActionRegistry.Register((&actions.MintAsset{}).GetTypeID(), actions.UnmarshalMintAsset, false),
 		consts.ActionRegistry.Register((&actions.CreateNFT{}).GetTypeID(), actions.UnmarshalCreateNFT, false),
 		consts.ActionRegistry.Register((&actions.GetNFT{}).GetTypeID(), actions.UnmarshalGetNFT, false),
+		consts.ActionRegistry.Register((&actions.TransferNFT{}).GetTypeID(), actions.UnmarshalTransferNFT, false),
+
+		consts.ActionRegistry.Register((&actions.ImportAsset{}).GetTypeID(), actions.UnmarshalImportAsset, true),
+		consts.ActionRegistry.Register((&actions.ExportAsset{}).GetTypeID(), actions.UnmarshalExportAsset, false),
 
 		// When registering new auth, ALWAYS make sure to append at the end.
 		consts.AuthRegistry.Register((&auth.ED25519{}).GetTypeID(), auth.UnmarshalED25519, false),

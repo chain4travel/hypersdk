@@ -148,6 +148,9 @@ func init() {
 		mintAssetCmd,
 		createNFTCmd,
 		getNFTCmd,
+		transferNFTCmd,
+		importAssetCmd,
+		exportAssetCmd,
 	)
 
 	// spam

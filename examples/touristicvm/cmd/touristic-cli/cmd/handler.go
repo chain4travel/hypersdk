@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"context"
+	hconsts "github.com/ava-labs/hypersdk/consts"
 
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/hypersdk/chain"
@@ -32,6 +33,68 @@ func NewHandler(h *cli.Handler) *Handler {
 
 func (h *Handler) Root() *cli.Handler {
 	return h.h
+}
+func (*Handler) GetAssetInfo(
+	ctx context.Context,
+	cli *brpc.JSONRPCClient,
+	addr codec.Address,
+	assetID ids.ID,
+	checkBalance bool,
+) ([]byte, uint8, uint64, ids.ID, error) {
+	var sourceChainID ids.ID
+	exists, symbol, decimals, metadata, supply, _, _, warp, err := cli.Asset(ctx, assetID, false)
+	if err != nil {
+		return nil, 0, 0, ids.Empty, err
+	}
+	if assetID != ids.Empty {
+		if !exists {
+			utils.Outf("{{red}}%s does not exist{{/}}\n", assetID)
+			utils.Outf("{{red}}exiting...{{/}}\n")
+			return nil, 0, 0, ids.Empty, nil
+		}
+		if warp {
+			sourceChainID = ids.ID(metadata[hconsts.IDLen:])
+			sourceAssetID := ids.ID(metadata[:hconsts.IDLen])
+			utils.Outf(
+				"{{yellow}}sourceChainID:{{/}} %s {{yellow}}sourceAssetID:{{/}} %s {{yellow}}supply:{{/}} %d\n",
+				sourceChainID,
+				sourceAssetID,
+				supply,
+			)
+		} else {
+			utils.Outf(
+				"{{yellow}}symbol:{{/}} %s {{yellow}}decimals:{{/}} %d {{yellow}}metadata:{{/}} %s {{yellow}}supply:{{/}} %d {{yellow}}warp:{{/}} %t\n",
+				symbol,
+				decimals,
+				metadata,
+				supply,
+				warp,
+			)
+		}
+	}
+	if !checkBalance {
+		return symbol, decimals, 0, sourceChainID, nil
+	}
+	saddr, err := codec.AddressBech32(consts.HRP, addr)
+	if err != nil {
+		return nil, 0, 0, ids.Empty, err
+	}
+	balance, err := cli.Balance(ctx, saddr)
+	if err != nil {
+		return nil, 0, 0, ids.Empty, err
+	}
+	if balance == 0 {
+		utils.Outf("{{red}}balance:{{/}} 0 %s\n", assetID)
+		utils.Outf("{{red}}please send funds to %s{{/}}\n", saddr)
+		utils.Outf("{{red}}exiting...{{/}}\n")
+	} else {
+		utils.Outf(
+			"{{yellow}}balance:{{/}} %s %s\n",
+			utils.FormatBalance(balance, decimals),
+			symbol,
+		)
+	}
+	return symbol, decimals, balance, sourceChainID, nil
 }
 
 func (h *Handler) DefaultActor() (
