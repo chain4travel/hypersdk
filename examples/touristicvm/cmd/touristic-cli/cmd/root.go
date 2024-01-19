@@ -149,6 +149,7 @@ func init() {
 		createNFTCmd,
 		getNFTCmd,
 		transferNFTCmd,
+		burnNFTCmd,
 		importAssetCmd,
 		exportAssetCmd,
 	)

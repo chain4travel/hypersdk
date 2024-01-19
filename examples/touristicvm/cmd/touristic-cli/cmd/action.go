@@ -340,6 +340,47 @@ var transferNFTCmd = &cobra.Command{
 		return err
 	},
 }
+var burnNFTCmd = &cobra.Command{
+	Use: "burn-nft",
+	RunE: func(*cobra.Command, []string) error {
+		ctx := context.Background()
+		_, priv, factory, cli, sCli, tCli, err := handler.DefaultActor()
+		if err != nil {
+			return err
+		}
+
+		nftID, err := handler.Root().PromptAsset("nftID", false)
+		if err != nil {
+			return err
+		}
+		exists, _, owner, _, err := tCli.NFT(ctx, nftID, false)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			hutils.Outf("{{red}}%s does not exist{{/}}\n", nftID)
+			hutils.Outf("{{red}}exiting...{{/}}\n")
+			return nil
+		}
+		if owner != codec.MustAddressBech32(tconsts.HRP, priv.Address) {
+			hutils.Outf("{{red}}%s is the owner of %s, you are not{{/}}\n", owner, nftID)
+			hutils.Outf("{{red}}exiting...{{/}}\n")
+			return nil
+		}
+		// Confirm action
+		cont, err := handler.Root().PromptContinue()
+		if !cont || err != nil {
+			return err
+		}
+
+		// Generate transaction
+		_, _, err = sendAndWait(ctx, nil, &actions.TransferNFT{
+			NFT: nftID,
+			To:  codec.BlackholeAddress,
+		}, cli, sCli, tCli, factory, true)
+		return err
+	},
+}
 var importAssetCmd = &cobra.Command{
 	Use: "import-asset",
 	RunE: func(*cobra.Command, []string) error {
