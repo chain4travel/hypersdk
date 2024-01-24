@@ -56,7 +56,7 @@ func (h *Handler) ImportANR() error {
 
 	// Load new items from ANR
 	anrCli, err := runner.New(runner.Config{
-		Endpoint:    "0.0.0.0:12352",
+		Endpoint:    "0.0.0.0:8080",
 		DialTimeout: 10 * time.Second,
 	}, logging.NoLog{})
 	if err != nil {
@@ -107,6 +107,22 @@ func (h *Handler) ImportANR() error {
 				filledChainID = chainID
 			}
 		}
+	}
+	for _, customChainInfo := range status.ClusterInfo.CustomChains {
+		uri := fmt.Sprintf("http://127.0.0.1:9650/ext/bc/%s", customChainInfo.ChainId)
+		chainID, err := ids.FromString(customChainInfo.ChainId)
+		if err != nil {
+			return err
+		}
+		if err := h.StoreChain(chainID, uri); err != nil {
+			return err
+		}
+		utils.Outf(
+			"{{yellow}}stored chainID:{{/}} %s {{yellow}}uri:{{/}} %s\n",
+			chainID,
+			uri,
+		)
+		filledChainID = chainID
 	}
 	return h.StoreDefaultChain(filledChainID)
 }

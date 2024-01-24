@@ -548,6 +548,9 @@ func (vm *VM) onNormalOperationsStarted() error {
 
 // implements "block.ChainVM.common.VM"
 func (vm *VM) Shutdown(ctx context.Context) error {
+	if vm.stop == nil {
+		return nil //not yet initialized
+	}
 	close(vm.stop)
 
 	// Shutdown state sync client if still running
