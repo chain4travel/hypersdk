@@ -6,6 +6,7 @@ package genesis
 import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/hypersdk/chain"
+	"github.com/ava-labs/hypersdk/examples/touristicvm/storage"
 )
 
 var _ chain.Rules = (*Rules)(nil)
@@ -23,7 +24,11 @@ func (g *Genesis) Rules(_ int64, networkID uint32, chainID ids.ID) *Rules {
 }
 
 func (*Rules) GetWarpConfig(ids.ID) (bool, uint64, uint64) {
-	return false, 0, 0
+	// We allow inbound transfers from all sources as long as 80% of stake has
+	// signed a message.
+	//
+	// This is safe because the tokenvm scopes all assets by their source chain.
+	return true, 4, 5
 }
 
 func (r *Rules) NetworkID() uint32 {
@@ -64,6 +69,10 @@ func (r *Rules) GetWarpComputeUnitsPerSigner() uint64 {
 
 func (r *Rules) GetOutgoingWarpComputeUnits() uint64 {
 	return r.g.OutgoingWarpComputeUnits
+}
+
+func (*Rules) GetSponsorStateKeysMaxChunks() []uint16 {
+	return []uint16{storage.BalanceChunks}
 }
 
 func (r *Rules) GetStorageKeyReadUnits() uint64 {

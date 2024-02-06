@@ -219,7 +219,7 @@ killall avalanche-network-runner || true
 echo "launch avalanche-network-runner in the background"
 $BIN server \
 --log-level=verbo \
---port=":12352" \
+--port=":12352"
 --grpc-gateway-port=":12353" &
 PID=${!}
 

@@ -28,7 +28,7 @@ func (*GetNFT) GetTypeID() uint8 {
 	return getNFTID
 }
 
-func (*GetNFT) StateKeys(_ chain.Auth, txID ids.ID) []string {
+func (*GetNFT) StateKeys(_ codec.Address, txID ids.ID) []string {
 	return []string{
 		string(storage.NFTKey(txID)),
 	}
@@ -46,7 +46,7 @@ func (c *GetNFT) Execute(
 	_ chain.Rules,
 	mu state.Mutable,
 	_ int64,
-	rauth chain.Auth,
+	actor codec.Address,
 	txID ids.ID,
 	_ bool,
 ) (bool, uint64, []byte, *warp.UnsignedMessage, error) {

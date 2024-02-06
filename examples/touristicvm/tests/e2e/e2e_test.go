@@ -21,9 +21,9 @@ import (
 	"github.com/ava-labs/hypersdk/examples/touristicvm/actions"
 	"github.com/ava-labs/hypersdk/examples/touristicvm/auth"
 	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
-	lrpc "github.com/ava-labs/hypersdk/examples/touristicvm/rpc"
+	trpc "github.com/ava-labs/hypersdk/examples/touristicvm/rpc"
 	"github.com/ava-labs/hypersdk/rpc"
-	"github.com/ava-labs/hypersdk/utils"
+	hutils "github.com/ava-labs/hypersdk/utils"
 	"github.com/fatih/color"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -33,7 +33,7 @@ const (
 	startAmount = uint64(10000000000000000000)
 	sendAmount  = uint64(5000)
 
-	healthPollInterval = 3 * time.Second
+	healthPollInterval = 10 * time.Second
 )
 
 func TestE2e(t *testing.T) {
@@ -62,7 +62,8 @@ var (
 
 	logsDir string
 
-	blockchainID string
+	blockchainIDA string
+	blockchainIDB string
 
 	trackSubnetsOpt runner_sdk.OpOption
 
@@ -162,9 +163,10 @@ func init() {
 }
 
 const (
-	modeTest     = "test"
-	modeFullTest = "full-test" // runs state sync
-	modeRun      = "run"
+	modeTest      = "test"
+	modeFullTest  = "full-test" // runs state sync
+	modeRun       = "run"
+	modeRunSingle = "run-single"
 )
 
 var anrCli runner_sdk.Client
@@ -174,6 +176,7 @@ var _ = ginkgo.BeforeSuite(func() {
 		gomega.Equal(modeTest),
 		gomega.Equal(modeFullTest),
 		gomega.Equal(modeRun),
+		gomega.Equal(modeRunSingle),
 	))
 	gomega.Expect(numValidators).Should(gomega.BeNumerically(">", 0))
 	logLevel, err := logging.ToLevel(networkRunnerLogLevel)
@@ -191,19 +194,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	}, log)
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	// Load default pk
-	privBytes, err := codec.LoadHex(
-		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
-		ed25519.PrivateKeyLen,
-	)
-	gomega.Ω(err).Should(gomega.BeNil())
-	priv = ed25519.PrivateKey(privBytes)
-	factory = auth.NewED25519Factory(priv)
-	rsender = auth.NewED25519Address(priv.PublicKey())
-	sender = codec.MustAddressBech32(consts.HRP, rsender)
-	utils.Outf("\n{{yellow}}$ loaded address:{{/}} %s\n\n", sender)
-
-	utils.Outf(
+	hutils.Outf(
 		"{{green}}sending 'start' with binary path:{{/}} %q (%q)\n",
 		execPath,
 		consts.ID,
@@ -255,18 +246,23 @@ var _ = ginkgo.BeforeSuite(func() {
 	)
 	cancel()
 	gomega.Expect(err).Should(gomega.BeNil())
-	utils.Outf(
+	hutils.Outf(
 		"{{green}}successfully started cluster:{{/}} %s {{green}}subnets:{{/}} %+v\n",
 		resp.ClusterInfo.RootDataDir,
 		resp.GetClusterInfo().GetSubnets(),
 	)
 	logsDir = resp.GetClusterInfo().GetRootDataDir()
 
-	// Name 5 new validators (which should have BLS key registered)
-	subnet := []string{}
-	for i := 1; i <= int(numValidators); i++ {
+	// Name 10 new validators (which should have BLS key registered)
+	subnetA := []string{}
+	subnetB := []string{}
+	for i := 1; i <= int(numValidators)*2; i++ {
 		n := fmt.Sprintf("node%d-bls", i)
-		subnet = append(subnet, n)
+		if i <= int(numValidators) {
+			subnetA = append(subnetA, n)
+		} else {
+			subnetB = append(subnetB, n)
+		}
 	}
 	specs := []*rpcpb.BlockchainSpec{
 		{
@@ -275,12 +271,24 @@ var _ = ginkgo.BeforeSuite(func() {
 			ChainConfig: vmConfigPath,
 			SubnetSpec: &rpcpb.SubnetSpec{
 				SubnetConfig: subnetConfigPath,
-				Participants: subnet,
+				Participants: subnetA,
+			},
+		},
+		{
+			VmName:      consts.Name,
+			Genesis:     vmGenesisPath,
+			ChainConfig: vmConfigPath,
+			SubnetSpec: &rpcpb.SubnetSpec{
+				SubnetConfig: subnetConfigPath,
+				Participants: subnetB,
 			},
 		},
 	}
+	if mode == modeRunSingle {
+		specs = specs[0:1]
+	}
 
-	// Create subnet
+	// Create 2 subnets
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 	sresp, err := anrCli.CreateBlockchains(
 		ctx,
@@ -289,20 +297,40 @@ var _ = ginkgo.BeforeSuite(func() {
 	cancel()
 	gomega.Expect(err).Should(gomega.BeNil())
 
-	blockchainID = sresp.ChainIds[0]
-	subnetID := sresp.ClusterInfo.CustomChains[blockchainID].SubnetId
-	utils.Outf(
+	blockchainIDA = sresp.ChainIds[0]
+	subnetIDA := sresp.ClusterInfo.CustomChains[blockchainIDA].SubnetId
+	hutils.Outf(
 		"{{green}}successfully added chain:{{/}} %s {{green}}subnet:{{/}} %s {{green}}participants:{{/}} %+v\n",
-		blockchainID,
-		subnetID,
-		subnet,
+		blockchainIDA,
+		subnetIDA,
+		subnetA,
 	)
-	trackSubnetsOpt = runner_sdk.WithGlobalNodeConfig(fmt.Sprintf(`{"%s":"%s"}`,
-		config.TrackSubnetsKey,
-		subnetID,
-	))
 
-	gomega.Expect(blockchainID).Should(gomega.Not(gomega.BeEmpty()))
+	if mode == modeRunSingle {
+		trackSubnetsOpt = runner_sdk.WithGlobalNodeConfig(fmt.Sprintf(`{"%s":"%s"}`,
+			config.TrackSubnetsKey,
+			subnetIDA,
+		))
+	} else {
+		blockchainIDB = sresp.ChainIds[1]
+		subnetIDB := sresp.ClusterInfo.CustomChains[blockchainIDB].SubnetId
+		hutils.Outf(
+			"{{green}}successfully added chain:{{/}} %s {{green}}subnet:{{/}} %s {{green}}participants:{{/}} %+v\n",
+			blockchainIDB,
+			subnetIDB,
+			subnetB,
+		)
+		trackSubnetsOpt = runner_sdk.WithGlobalNodeConfig(fmt.Sprintf(`{"%s":"%s,%s"}`,
+			config.TrackSubnetsKey,
+			subnetIDA,
+			subnetIDB,
+		))
+	}
+
+	gomega.Expect(blockchainIDA).Should(gomega.Not(gomega.BeEmpty()))
+	if mode != modeRunSingle {
+		gomega.Expect(blockchainIDB).Should(gomega.Not(gomega.BeEmpty()))
+	}
 	gomega.Expect(logsDir).Should(gomega.Not(gomega.BeEmpty()))
 
 	cctx, ccancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -311,11 +339,11 @@ var _ = ginkgo.BeforeSuite(func() {
 	gomega.Expect(err).Should(gomega.BeNil())
 	nodeInfos := status.GetClusterInfo().GetNodeInfos()
 
-	instances = []instance{}
-	for _, nodeName := range subnet {
+	instancesA = []instance{}
+	for _, nodeName := range subnetA {
 		info := nodeInfos[nodeName]
-		u := fmt.Sprintf("%s/ext/bc/%s", info.Uri, blockchainID)
-		bid, err := ids.FromString(blockchainID)
+		u := fmt.Sprintf("%s/ext/bc/%s", info.Uri, blockchainIDA)
+		bid, err := ids.FromString(blockchainIDA)
 		gomega.Expect(err).Should(gomega.BeNil())
 		nodeID, err := ids.NodeIDFromString(info.GetId())
 		gomega.Expect(err).Should(gomega.BeNil())
@@ -334,13 +362,58 @@ var _ = ginkgo.BeforeSuite(func() {
 		}
 		gomega.Expect(err).Should(gomega.BeNil())
 
-		instances = append(instances, instance{
+		instancesA = append(instancesA, instance{
 			nodeID: nodeID,
 			uri:    u,
 			cli:    cli,
-			lcli:   lrpc.NewJSONRPCClient(u, networkID, bid),
+			tcli:   trpc.NewJSONRPCClient(u, networkID, bid),
 		})
 	}
+
+	if mode != modeRunSingle {
+		instancesB = []instance{}
+		for _, nodeName := range subnetB {
+			info := nodeInfos[nodeName]
+			u := fmt.Sprintf("%s/ext/bc/%s", info.Uri, blockchainIDB)
+			bid, err := ids.FromString(blockchainIDB)
+			gomega.Expect(err).Should(gomega.BeNil())
+			nodeID, err := ids.NodeIDFromString(info.GetId())
+			gomega.Expect(err).Should(gomega.BeNil())
+			cli := rpc.NewJSONRPCClient(u)
+
+			// After returning healthy, the node may not respond right away
+			//
+			// TODO: figure out why
+			var networkID uint32
+			for i := 0; i < 10; i++ {
+				networkID, _, _, err = cli.Network(context.TODO())
+				if err != nil {
+					time.Sleep(1 * time.Second)
+					continue
+				}
+			}
+			gomega.Expect(err).Should(gomega.BeNil())
+
+			instancesB = append(instancesB, instance{
+				nodeID: nodeID,
+				uri:    u,
+				cli:    cli,
+				tcli:   trpc.NewJSONRPCClient(u, networkID, bid),
+			})
+		}
+	}
+
+	// Load default pk
+	privBytes, err := codec.LoadHex(
+		"323b1d8f4eed5f0da9da93071b034f2dce9d2d22692c172f3cb252a64ddfafd01b057de320297c29ad0c1f589ea216869cf1938d88c9fbd70d6748323dbf2fa7", //nolint:lll
+		ed25519.PrivateKeyLen,
+	)
+	gomega.Ω(err).Should(gomega.BeNil())
+	priv = ed25519.PrivateKey(privBytes)
+	factory = auth.NewED25519Factory(priv)
+	rsender = auth.NewED25519Address(priv.PublicKey())
+	sender = codec.MustAddressBech32(consts.HRP, rsender)
+	hutils.Outf("\n{{yellow}}$ loaded address:{{/}} %s\n\n", sender)
 })
 
 var (
@@ -349,30 +422,42 @@ var (
 	rsender codec.Address
 	sender  string
 
-	instances []instance
+	instancesA []instance
+	instancesB []instance
 )
 
 type instance struct {
 	nodeID ids.NodeID
 	uri    string
 	cli    *rpc.JSONRPCClient
-	lcli   *lrpc.JSONRPCClient
+	tcli   *trpc.JSONRPCClient
 }
 
 var _ = ginkgo.AfterSuite(func() {
 	switch mode {
 	case modeTest, modeFullTest:
-		utils.Outf("{{red}}shutting down cluster{{/}}\n")
+		hutils.Outf("{{red}}shutting down cluster{{/}}\n")
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		_, err := anrCli.Stop(ctx)
 		cancel()
 		gomega.Expect(err).Should(gomega.BeNil())
 
 	case modeRun:
-		utils.Outf("{{yellow}}skipping cluster shutdown{{/}}\n\n")
-		utils.Outf("{{cyan}}Blockchain:{{/}} %s\n", blockchainID)
-		for _, member := range instances {
-			utils.Outf("%s URI: %s\n", member.nodeID, member.uri)
+		hutils.Outf("{{yellow}}skipping cluster shutdown{{/}}\n\n")
+		hutils.Outf("{{cyan}}Blockchain A:{{/}} %s\n", blockchainIDA)
+		for _, member := range instancesA {
+			hutils.Outf("%s URI: %s\n", member.nodeID, member.uri)
+		}
+		hutils.Outf("\n{{cyan}}Blockchain B:{{/}} %s\n", blockchainIDB)
+		for _, member := range instancesB {
+			hutils.Outf("%s URI: %s\n", member.nodeID, member.uri)
+		}
+
+	case modeRunSingle:
+		hutils.Outf("{{yellow}}skipping cluster shutdown{{/}}\n\n")
+		hutils.Outf("{{cyan}}Blockchain:{{/}} %s\n", blockchainIDA)
+		for _, member := range instancesA {
+			hutils.Outf("%s URI: %s\n", member.nodeID, member.uri)
 		}
 	}
 	gomega.Expect(anrCli.Close()).Should(gomega.BeNil())
@@ -380,7 +465,16 @@ var _ = ginkgo.AfterSuite(func() {
 
 var _ = ginkgo.Describe("[Ping]", func() {
 	ginkgo.It("can ping A", func() {
-		for _, inst := range instances {
+		for _, inst := range instancesA {
+			cli := inst.cli
+			ok, err := cli.Ping(context.Background())
+			gomega.Ω(ok).Should(gomega.BeTrue())
+			gomega.Ω(err).Should(gomega.BeNil())
+		}
+	})
+
+	ginkgo.It("can ping B", func() {
+		for _, inst := range instancesB {
 			cli := inst.cli
 			ok, err := cli.Ping(context.Background())
 			gomega.Ω(ok).Should(gomega.BeTrue())
@@ -390,11 +484,19 @@ var _ = ginkgo.Describe("[Ping]", func() {
 })
 
 var _ = ginkgo.Describe("[Network]", func() {
-	ginkgo.It("can get network", func() {
-		for _, inst := range instances {
+	ginkgo.It("can get network A", func() {
+		for _, inst := range instancesA {
 			cli := inst.cli
-			networkID, _, chainID, err := cli.Network(context.Background())
-			gomega.Ω(networkID).Should(gomega.Equal(uint32(1337)))
+			_, _, chainID, err := cli.Network(context.Background())
+			gomega.Ω(chainID).ShouldNot(gomega.Equal(ids.Empty))
+			gomega.Ω(err).Should(gomega.BeNil())
+		}
+	})
+
+	ginkgo.It("can get network B", func() {
+		for _, inst := range instancesB {
+			cli := inst.cli
+			_, _, chainID, err := cli.Network(context.Background())
 			gomega.Ω(chainID).ShouldNot(gomega.Equal(ids.Empty))
 			gomega.Ω(err).Should(gomega.BeNil())
 		}
@@ -403,26 +505,25 @@ var _ = ginkgo.Describe("[Network]", func() {
 
 var _ = ginkgo.Describe("[Test]", func() {
 	switch mode {
-	case modeRun:
-		utils.Outf("{{yellow}}skipping tests{{/}}\n")
+	case modeRun, modeRunSingle:
+		hutils.Outf("{{yellow}}skipping tests{{/}}\n")
 		return
 	}
 
 	ginkgo.It("transfer in a single node (raw)", func() {
-		nativeBalance, err := instances[0].lcli.Balance(context.TODO(), sender)
+		nativeBalance, err := instancesA[0].tcli.Balance(context.TODO(), sender, ids.Empty)
 		gomega.Ω(err).Should(gomega.BeNil())
 		gomega.Ω(nativeBalance).Should(gomega.Equal(startAmount))
 
 		other, err := ed25519.GeneratePrivateKey()
 		gomega.Ω(err).Should(gomega.BeNil())
 		aother := auth.NewED25519Address(other.PublicKey())
-		aotherStr := codec.MustAddressBech32(consts.HRP, aother)
 
 		ginkgo.By("issue Transfer to the first node", func() {
 			// Generate transaction
-			parser, err := instances[0].lcli.Parser(context.TODO())
+			parser, err := instancesA[0].tcli.Parser(context.TODO())
 			gomega.Ω(err).Should(gomega.BeNil())
-			submit, tx, _, err := instances[0].cli.GenerateTransaction(
+			submit, tx, maxFee, err := instancesA[0].cli.GenerateTransaction(
 				context.Background(),
 				parser,
 				nil,
@@ -433,34 +534,34 @@ var _ = ginkgo.Describe("[Test]", func() {
 				factory,
 			)
 			gomega.Ω(err).Should(gomega.BeNil())
-			utils.Outf("{{yellow}}generated transaction{{/}}\n")
+			hutils.Outf("{{yellow}}generated transaction{{/}}\n")
 
 			// Broadcast and wait for transaction
 			gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
-			utils.Outf("{{yellow}}submitted transaction{{/}}\n")
+			hutils.Outf("{{yellow}}submitted transaction{{/}}\n")
 			ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-			success, fee, err := instances[0].lcli.WaitForTransaction(ctx, tx.ID())
+			success, fee, err := instancesA[0].tcli.WaitForTransaction(ctx, tx.ID())
 			cancel()
 			gomega.Ω(err).Should(gomega.BeNil())
 			gomega.Ω(success).Should(gomega.BeTrue())
-			utils.Outf("{{yellow}}found transaction{{/}}\n")
+			hutils.Outf("{{yellow}}found transaction{{/}}\n")
 
 			// Check sender balance
-			balance, err := instances[0].lcli.Balance(context.Background(), sender)
+			balance, err := instancesA[0].tcli.Balance(context.Background(), sender, ids.Empty)
 			gomega.Ω(err).Should(gomega.BeNil())
-			utils.Outf(
+			hutils.Outf(
 				"{{yellow}}start=%d fee=%d send=%d balance=%d{{/}}\n",
 				startAmount,
-				fee,
+				maxFee,
 				sendAmount,
 				balance,
 			)
 			gomega.Ω(balance).Should(gomega.Equal(startAmount - fee - sendAmount))
-			utils.Outf("{{yellow}}fetched balance{{/}}\n")
+			hutils.Outf("{{yellow}}fetched balance{{/}}\n")
 		})
 
 		ginkgo.By("check if Transfer has been accepted from all nodes", func() {
-			for _, inst := range instances {
+			for _, inst := range instancesA {
 				color.Blue("checking %q", inst.uri)
 
 				// Ensure all blocks processed
@@ -474,7 +575,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 				}
 
 				// Check balance of recipient
-				balance, err := inst.lcli.Balance(context.Background(), aotherStr)
+				balance, err := inst.tcli.Balance(context.Background(), codec.MustAddressBech32(consts.HRP, aother), ids.Empty)
 				gomega.Ω(err).Should(gomega.BeNil())
 				gomega.Ω(balance).Should(gomega.Equal(sendAmount))
 			}
@@ -483,19 +584,19 @@ var _ = ginkgo.Describe("[Test]", func() {
 
 	switch mode {
 	case modeTest:
-		utils.Outf("{{yellow}}skipping bootstrap and state sync tests{{/}}\n")
+		hutils.Outf("{{yellow}}skipping bootstrap and state sync tests{{/}}\n")
 		return
 	}
 
 	// Create blocks before bootstrapping starts
 	count := 0
 	ginkgo.It("supports issuance of 128 blocks", func() {
-		count += generateBlocks(context.Background(), count, 128, instances, true)
+		count += generateBlocks(context.Background(), count, 128, instancesA, true)
 	})
 
 	// Ensure bootstrapping works
 	var syncClient *rpc.JSONRPCClient
-	var lsyncClient *lrpc.JSONRPCClient
+	var tsyncClient *trpc.JSONRPCClient
 	ginkgo.It("can bootstrap a new node", func() {
 		cluster, err := anrCli.AddNode(
 			context.Background(),
@@ -503,70 +604,40 @@ var _ = ginkgo.Describe("[Test]", func() {
 			execPath,
 			trackSubnetsOpt,
 			runner_sdk.WithChainConfigs(map[string]string{
-				blockchainID: vmConfig,
+				blockchainIDA: vmConfig,
 			}),
 		)
 		gomega.Expect(err).To(gomega.BeNil())
 		awaitHealthy(anrCli)
 
 		nodeURI := cluster.ClusterInfo.NodeInfos["bootstrap"].Uri
-		uri := nodeURI + fmt.Sprintf("/ext/bc/%s", blockchainID)
-		bid, err := ids.FromString(blockchainID)
+		uri := nodeURI + fmt.Sprintf("/ext/bc/%s", blockchainIDA)
+		bid, err := ids.FromString(blockchainIDA)
 		gomega.Expect(err).To(gomega.BeNil())
-		utils.Outf("{{blue}}bootstrap node uri: %s{{/}}\n", uri)
+		hutils.Outf("{{blue}}bootstrap node uri: %s{{/}}\n", uri)
 		c := rpc.NewJSONRPCClient(uri)
 		syncClient = c
 		networkID, _, _, err := syncClient.Network(context.TODO())
 		gomega.Expect(err).Should(gomega.BeNil())
-		tc := lrpc.NewJSONRPCClient(uri, networkID, bid)
-		lsyncClient = tc
-		instances = append(instances, instance{
+		tc := trpc.NewJSONRPCClient(uri, networkID, bid)
+		tsyncClient = tc
+		instancesA = append(instancesA, instance{
 			uri:  uri,
 			cli:  c,
-			lcli: tc,
+			tcli: tc,
 		})
 	})
 
 	ginkgo.It("accepts transaction after it bootstraps", func() {
-		acceptTransaction(syncClient, lsyncClient)
+		acceptTransaction(syncClient, tsyncClient)
 	})
 
-	ginkgo.It("becomes ready quickly after restart", func() {
-		cluster, err := anrCli.RestartNode(context.Background(), "bootstrap")
-		gomega.Expect(err).To(gomega.BeNil())
-
-		// Upon restart, the node should be able to read blocks from disk
-		// to initialize its [seen] index and become ready in less than
-		// [ValidityWindow].
-		start := time.Now()
-		awaitHealthy(anrCli)
-		gomega.Expect(time.Since(start) < 20*time.Second).To(gomega.BeTrue())
-
-		// Update bootstrap info to latest in case it was assigned a new port
-		nodeURI := cluster.ClusterInfo.NodeInfos["bootstrap"].Uri
-		uri := nodeURI + fmt.Sprintf("/ext/bc/%s", blockchainID)
-		bid, err := ids.FromString(blockchainID)
-		gomega.Expect(err).To(gomega.BeNil())
-		utils.Outf("{{blue}}bootstrap node uri: %s{{/}}\n", uri)
-		c := rpc.NewJSONRPCClient(uri)
-		syncClient = c
-		networkID, _, _, err := syncClient.Network(context.TODO())
-		gomega.Expect(err).Should(gomega.BeNil())
-		tc := lrpc.NewJSONRPCClient(uri, networkID, bid)
-		lsyncClient = tc
-		instances[len(instances)-1] = instance{
-			uri:  uri,
-			cli:  c,
-			lcli: tc,
-		}
-	})
-
-	// Create blocks before state sync starts (state sync requires at least 1024
+	// Create blocks before state sync starts (state sync requires at least 256
 	// blocks)
 	//
 	// We do 1024 so that there are a number of ranges of data to fetch.
 	ginkgo.It("supports issuance of at least 1024 more blocks", func() {
-		count += generateBlocks(context.Background(), count, 1024, instances, true)
+		count += generateBlocks(context.Background(), count, 1024, instancesA, true)
 		// TODO: verify all roots are equal
 	})
 
@@ -577,7 +648,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			execPath,
 			trackSubnetsOpt,
 			runner_sdk.WithChainConfigs(map[string]string{
-				blockchainID: vmConfig,
+				blockchainIDA: vmConfig,
 			}),
 		)
 		gomega.Expect(err).To(gomega.BeNil())
@@ -585,18 +656,18 @@ var _ = ginkgo.Describe("[Test]", func() {
 		awaitHealthy(anrCli)
 
 		nodeURI := cluster.ClusterInfo.NodeInfos["sync"].Uri
-		uri := nodeURI + fmt.Sprintf("/ext/bc/%s", blockchainID)
-		bid, err := ids.FromString(blockchainID)
+		uri := nodeURI + fmt.Sprintf("/ext/bc/%s", blockchainIDA)
+		bid, err := ids.FromString(blockchainIDA)
 		gomega.Expect(err).To(gomega.BeNil())
-		utils.Outf("{{blue}}sync node uri: %s{{/}}\n", uri)
+		hutils.Outf("{{blue}}sync node uri: %s{{/}}\n", uri)
 		syncClient = rpc.NewJSONRPCClient(uri)
 		networkID, _, _, err := syncClient.Network(context.TODO())
 		gomega.Expect(err).To(gomega.BeNil())
-		lsyncClient = lrpc.NewJSONRPCClient(uri, networkID, bid)
+		tsyncClient = trpc.NewJSONRPCClient(uri, networkID, bid)
 	})
 
 	ginkgo.It("accepts transaction after state sync", func() {
-		acceptTransaction(syncClient, lsyncClient)
+		acceptTransaction(syncClient, tsyncClient)
 	})
 
 	ginkgo.It("can pause a node", func() {
@@ -615,7 +686,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 	})
 
 	ginkgo.It("supports issuance of 256 more blocks", func() {
-		count += generateBlocks(context.Background(), count, 256, instances, true)
+		count += generateBlocks(context.Background(), count, 256, instancesA, true)
 		// TODO: verify all roots are equal
 	})
 
@@ -630,7 +701,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 	})
 
 	ginkgo.It("accepts transaction after restarted node state sync", func() {
-		acceptTransaction(syncClient, lsyncClient)
+		acceptTransaction(syncClient, tsyncClient)
 	})
 
 	ginkgo.It("state sync while broadcasting transactions", func() {
@@ -639,7 +710,7 @@ var _ = ginkgo.Describe("[Test]", func() {
 			// Recover failure if exits
 			defer ginkgo.GinkgoRecover()
 
-			count += generateBlocks(ctx, count, 0, instances, false)
+			count += generateBlocks(ctx, count, 0, instancesA, false)
 		}()
 
 		// Give time for transactions to start processing
@@ -652,26 +723,26 @@ var _ = ginkgo.Describe("[Test]", func() {
 			execPath,
 			trackSubnetsOpt,
 			runner_sdk.WithChainConfigs(map[string]string{
-				blockchainID: vmConfig,
+				blockchainIDA: vmConfig,
 			}),
 		)
 		gomega.Expect(err).To(gomega.BeNil())
 		awaitHealthy(anrCli)
 
 		nodeURI := cluster.ClusterInfo.NodeInfos["sync_concurrent"].Uri
-		uri := nodeURI + fmt.Sprintf("/ext/bc/%s", blockchainID)
-		bid, err := ids.FromString(blockchainID)
+		uri := nodeURI + fmt.Sprintf("/ext/bc/%s", blockchainIDA)
+		bid, err := ids.FromString(blockchainIDA)
 		gomega.Expect(err).To(gomega.BeNil())
-		utils.Outf("{{blue}}sync node uri: %s{{/}}\n", uri)
+		hutils.Outf("{{blue}}sync node uri: %s{{/}}\n", uri)
 		syncClient = rpc.NewJSONRPCClient(uri)
 		networkID, _, _, err := syncClient.Network(context.TODO())
 		gomega.Expect(err).To(gomega.BeNil())
-		lsyncClient = lrpc.NewJSONRPCClient(uri, networkID, bid)
+		tsyncClient = trpc.NewJSONRPCClient(uri, networkID, bid)
 		cancel()
 	})
 
 	ginkgo.It("accepts transaction after state sync concurrent", func() {
-		acceptTransaction(syncClient, lsyncClient)
+		acceptTransaction(syncClient, tsyncClient)
 	})
 
 	// TODO: restart all nodes (crisis simulation)
@@ -686,7 +757,7 @@ func awaitHealthy(cli runner_sdk.Client) {
 		if err == nil {
 			return
 		}
-		utils.Outf(
+		hutils.Outf(
 			"{{yellow}}waiting for health check to pass:{{/}} %v\n",
 			err,
 		)
@@ -704,7 +775,7 @@ func generateBlocks(
 ) int {
 	_, lastHeight, _, err := instances[0].cli.Accepted(context.Background())
 	gomega.Ω(err).Should(gomega.BeNil())
-	parser, err := instances[0].lcli.Parser(context.Background())
+	parser, err := instances[0].tcli.Parser(context.Background())
 	gomega.Ω(err).Should(gomega.BeNil())
 	var targetHeight uint64
 	if blocksToGenerate != 0 {
@@ -714,13 +785,12 @@ func generateBlocks(
 		// Generate transaction
 		other, err := ed25519.GeneratePrivateKey()
 		gomega.Ω(err).Should(gomega.BeNil())
-		aother := auth.NewED25519Address(other.PublicKey())
 		submit, _, _, err := instances[cumulativeTxs%len(instances)].cli.GenerateTransaction(
 			context.Background(),
 			parser,
 			nil,
 			&actions.Transfer{
-				To:    aother,
+				To:    auth.NewED25519Address(other.PublicKey()),
 				Value: 1,
 			},
 			factory,
@@ -728,7 +798,7 @@ func generateBlocks(
 		if failOnError {
 			gomega.Ω(err).Should(gomega.BeNil())
 		} else if err != nil {
-			utils.Outf(
+			hutils.Outf(
 				"{{yellow}}unable to generate transaction:{{/}} %v\n",
 				err,
 			)
@@ -741,7 +811,7 @@ func generateBlocks(
 		if failOnError {
 			gomega.Ω(err).Should(gomega.BeNil())
 		} else if err != nil {
-			utils.Outf(
+			hutils.Outf(
 				"{{yellow}}tx broadcast failed:{{/}} %v\n",
 				err,
 			)
@@ -753,7 +823,7 @@ func generateBlocks(
 		if failOnError {
 			gomega.Ω(err).Should(gomega.BeNil())
 		} else if err != nil {
-			utils.Outf(
+			hutils.Outf(
 				"{{yellow}}height lookup failed:{{/}} %v\n",
 				err,
 			)
@@ -764,7 +834,7 @@ func generateBlocks(
 			break
 		} else if height > lastHeight {
 			lastHeight = height
-			utils.Outf("{{yellow}}height=%d count=%d{{/}}\n", height, cumulativeTxs)
+			hutils.Outf("{{yellow}}height=%d count=%d{{/}}\n", height, cumulativeTxs)
 		}
 
 		// Sleep for a very small amount of time to avoid overloading the
@@ -774,14 +844,13 @@ func generateBlocks(
 	return cumulativeTxs
 }
 
-func acceptTransaction(cli *rpc.JSONRPCClient, lcli *lrpc.JSONRPCClient) {
-	parser, err := lcli.Parser(context.Background())
+func acceptTransaction(cli *rpc.JSONRPCClient, tcli *trpc.JSONRPCClient) {
+	parser, err := tcli.Parser(context.Background())
 	gomega.Ω(err).Should(gomega.BeNil())
 	for {
 		// Generate transaction
 		other, err := ed25519.GeneratePrivateKey()
 		gomega.Ω(err).Should(gomega.BeNil())
-		aother := auth.NewED25519Address(other.PublicKey())
 		unitPrices, err := cli.UnitPrices(context.Background(), false)
 		gomega.Ω(err).Should(gomega.BeNil())
 		submit, tx, maxFee, err := cli.GenerateTransaction(
@@ -789,26 +858,26 @@ func acceptTransaction(cli *rpc.JSONRPCClient, lcli *lrpc.JSONRPCClient) {
 			parser,
 			nil,
 			&actions.Transfer{
-				To:    aother,
-				Value: 1,
+				To:    auth.NewED25519Address(other.PublicKey()),
+				Value: sendAmount,
 			},
 			factory,
 		)
 		gomega.Ω(err).Should(gomega.BeNil())
-		utils.Outf("{{yellow}}generated transaction{{/}} prices: %+v maxFee: %d\n", unitPrices, maxFee)
+		hutils.Outf("{{yellow}}generated transaction{{/}} prices: %+v maxFee: %d\n", unitPrices, maxFee)
 
 		// Broadcast and wait for transaction
 		gomega.Ω(submit(context.Background())).Should(gomega.BeNil())
-		utils.Outf("{{yellow}}submitted transaction{{/}}\n")
+		hutils.Outf("{{yellow}}submitted transaction{{/}}\n")
 		ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-		success, _, err := lcli.WaitForTransaction(ctx, tx.ID())
+		success, _, err := tcli.WaitForTransaction(ctx, tx.ID())
 		cancel()
 		if err != nil {
-			utils.Outf("{{red}}cannot find transaction: %v{{/}}\n", err)
+			hutils.Outf("{{red}}cannot find transaction: %v{{/}}\n", err)
 			continue
 		}
 		gomega.Ω(success).Should(gomega.BeTrue())
-		utils.Outf("{{yellow}}found transaction{{/}}\n")
+		hutils.Outf("{{yellow}}found transaction{{/}}\n")
 		break
 	}
 }

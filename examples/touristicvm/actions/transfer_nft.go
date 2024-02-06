@@ -6,7 +6,6 @@ package actions
 import (
 	"context"
 	"errors"
-
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"
 	"github.com/ava-labs/hypersdk/chain"
@@ -36,7 +35,7 @@ func (*TransferNFT) GetTypeID() uint8 {
 	return transferNFTID
 }
 
-func (m *TransferNFT) StateKeys(chain.Auth, ids.ID) []string {
+func (m *TransferNFT) StateKeys(codec.Address, ids.ID) []string {
 	return []string{
 		string(storage.NFTKey(m.NFT)),
 		string(storage.BalanceKey(m.To, m.NFT)),
@@ -56,7 +55,7 @@ func (t *TransferNFT) Execute(
 	_ chain.Rules,
 	mu state.Mutable,
 	_ int64,
-	auth chain.Auth,
+	actor codec.Address,
 	_ ids.ID,
 	_ bool,
 ) (bool, uint64, []byte, *warp.UnsignedMessage, error) {
@@ -70,7 +69,7 @@ func (t *TransferNFT) Execute(
 	if !exists {
 		return false, TransferNFTComputeUnits, utils.ErrBytes(OutputNFTNotFound), nil, nil
 	}
-	if auth.Actor() != owner {
+	if actor != owner {
 		return false, TransferNFTComputeUnits, utils.ErrBytes(OutputNotOwner), nil, nil
 	}
 
