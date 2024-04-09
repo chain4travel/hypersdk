@@ -6,7 +6,7 @@ package genesis
 import (
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/hypersdk/chain"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/storage"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/storage"
 )
 
 var _ chain.Rules = (*Rules)(nil)

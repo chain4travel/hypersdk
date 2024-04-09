@@ -12,12 +12,12 @@ import (
 	"github.com/ava-labs/avalanchego/ids"
 
 	"github.com/ava-labs/hypersdk/chain"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/genesis"
-	_ "github.com/ava-labs/hypersdk/examples/touristicvm/registry" // ensure registry populated
 	"github.com/ava-labs/hypersdk/requester"
 	"github.com/ava-labs/hypersdk/rpc"
 	"github.com/ava-labs/hypersdk/utils"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/consts"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/genesis"
+	_ "github.com/chain4travel/hypersdk/examples/touristicvm/registry" // ensure registry populated
 )
 
 type JSONRPCClient struct {

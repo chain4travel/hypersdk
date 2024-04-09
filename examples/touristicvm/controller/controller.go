@@ -19,14 +19,14 @@ import (
 	"github.com/ava-labs/hypersdk/vm"
 	"go.uber.org/zap"
 
-	"github.com/ava-labs/hypersdk/examples/touristicvm/actions"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/auth"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/config"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/genesis"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/rpc"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/storage"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/version"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/actions"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/auth"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/config"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/consts"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/genesis"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/rpc"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/storage"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/version"
 )
 
 var _ vm.Controller = (*Controller)(nil)

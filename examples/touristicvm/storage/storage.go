@@ -18,7 +18,7 @@ import (
 	"github.com/ava-labs/hypersdk/consts"
 	"github.com/ava-labs/hypersdk/state"
 
-	mconsts "github.com/ava-labs/hypersdk/examples/touristicvm/consts"
+	mconsts "github.com/chain4travel/hypersdk/examples/touristicvm/consts"
 )
 
 type ReadState func(context.Context, [][]byte) ([][]byte, []error)

@@ -1,4 +1,4 @@
-module github.com/ava-labs/hypersdk/examples/touristicvm
+module github.com/chain4travel/hypersdk/examples/touristicvm
 
 go 1.20
 

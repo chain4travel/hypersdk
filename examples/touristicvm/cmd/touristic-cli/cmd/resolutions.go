@@ -13,11 +13,11 @@ import (
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/cli"
 	"github.com/ava-labs/hypersdk/codec"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/actions"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
-	trpc "github.com/ava-labs/hypersdk/examples/touristicvm/rpc"
 	"github.com/ava-labs/hypersdk/rpc"
 	"github.com/ava-labs/hypersdk/utils"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/actions"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/consts"
+	trpc "github.com/chain4travel/hypersdk/examples/touristicvm/rpc"
 )
 
 // sendAndWait may not be used concurrently

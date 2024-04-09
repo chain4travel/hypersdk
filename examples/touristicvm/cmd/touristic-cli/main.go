@@ -7,8 +7,8 @@ package main
 import (
 	"os"
 
-	"github.com/ava-labs/hypersdk/examples/touristicvm/cmd/touristic-cli/cmd"
 	"github.com/ava-labs/hypersdk/utils"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/cmd/touristic-cli/cmd"
 )
 
 func main() {

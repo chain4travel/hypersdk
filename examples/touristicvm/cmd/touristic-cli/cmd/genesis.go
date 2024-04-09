@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ava-labs/hypersdk/chain"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/genesis"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/genesis"
 )
 
 var genesisCmd = &cobra.Command{

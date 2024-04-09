@@ -9,9 +9,9 @@ import (
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/codec"
 
-	"github.com/ava-labs/hypersdk/examples/touristicvm/actions"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/auth"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/actions"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/auth"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/consts"
 )
 
 // Setup types

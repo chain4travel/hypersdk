@@ -43,13 +43,13 @@ import (
 	"github.com/ava-labs/hypersdk/vm"
 	"github.com/ava-labs/hypersdk/workers"
 
-	"github.com/ava-labs/hypersdk/examples/touristicvm/actions"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/auth"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/controller"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/genesis"
-	trpc "github.com/ava-labs/hypersdk/examples/touristicvm/rpc"
 	"github.com/ava-labs/hypersdk/rpc"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/actions"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/auth"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/consts"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/controller"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/genesis"
+	trpc "github.com/chain4travel/hypersdk/examples/touristicvm/rpc"
 )
 
 const genesisBalance uint64 = hconsts.MaxUint64

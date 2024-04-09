@@ -42,12 +42,12 @@ import (
 	hutils "github.com/ava-labs/hypersdk/utils"
 	"github.com/ava-labs/hypersdk/vm"
 
-	"github.com/ava-labs/hypersdk/examples/touristicvm/actions"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/auth"
-	lconsts "github.com/ava-labs/hypersdk/examples/touristicvm/consts"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/controller"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/genesis"
-	lrpc "github.com/ava-labs/hypersdk/examples/touristicvm/rpc"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/actions"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/auth"
+	lconsts "github.com/chain4travel/hypersdk/examples/touristicvm/consts"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/controller"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/genesis"
+	lrpc "github.com/chain4travel/hypersdk/examples/touristicvm/rpc"
 )
 
 var (

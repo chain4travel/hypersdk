@@ -11,8 +11,8 @@ import (
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/codec"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/genesis"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/storage"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/genesis"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/storage"
 )
 
 func (c *Controller) Genesis() *genesis.Genesis {

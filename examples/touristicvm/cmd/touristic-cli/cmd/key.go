@@ -7,16 +7,16 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-
 	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/cb58"
 	"github.com/ava-labs/hypersdk/cli"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
 	"github.com/ava-labs/hypersdk/crypto/secp256r1"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/auth"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
-	brpc "github.com/ava-labs/hypersdk/examples/touristicvm/rpc"
 	"github.com/ava-labs/hypersdk/utils"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/auth"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/consts"
+	brpc "github.com/chain4travel/hypersdk/examples/touristicvm/rpc"
 	"github.com/spf13/cobra"
 )
 
@@ -115,6 +115,18 @@ var genKeyCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		pBytes, err := cb58.Decode("ewoqjP7PxY4yr3iLTpLisriqt94hdyDFNgchSxGGztUrTXtNN")
+
+		pk := secp256r1.PrivateKey(pBytes)
+		priv = &cli.PrivateKey{
+			Address: auth.NewSECP256R1Address(pk.PublicKey()),
+		}
+		fmt.Println(cb58.Encode(pBytes))
+		err = utils.SaveBytes("/home/kkyriakis/dev/c4t/hypersdk/examples/touristicvm/demo2.pk", pBytes)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 		if err := handler.h.StoreKey(priv); err != nil {
 			return err
 		}
@@ -139,6 +151,10 @@ var importKeyCmd = &cobra.Command{
 	},
 	RunE: func(_ *cobra.Command, args []string) error {
 		priv, err := loadPrivateKey(args[0], args[1])
+		if err != nil {
+			return err
+		}
+		fmt.Println(cb58.Encode(priv.Bytes))
 		if err != nil {
 			return err
 		}

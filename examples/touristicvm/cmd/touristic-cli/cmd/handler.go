@@ -13,12 +13,12 @@ import (
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
 	"github.com/ava-labs/hypersdk/crypto/secp256r1"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/auth"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
-	brpc "github.com/ava-labs/hypersdk/examples/touristicvm/rpc"
 	"github.com/ava-labs/hypersdk/pubsub"
 	"github.com/ava-labs/hypersdk/rpc"
 	"github.com/ava-labs/hypersdk/utils"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/auth"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/consts"
+	brpc "github.com/chain4travel/hypersdk/examples/touristicvm/rpc"
 )
 
 var _ cli.Controller = (*Controller)(nil)

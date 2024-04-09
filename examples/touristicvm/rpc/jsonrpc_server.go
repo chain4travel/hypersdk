@@ -10,8 +10,8 @@ import (
 
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/codec"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/genesis"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/consts"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/genesis"
 )
 
 type JSONRPCServer struct {

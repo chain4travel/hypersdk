@@ -10,7 +10,7 @@ import (
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/spf13/cobra"
 
-	trpc "github.com/ava-labs/hypersdk/examples/touristicvm/rpc"
+	trpc "github.com/chain4travel/hypersdk/examples/touristicvm/rpc"
 )
 
 var chainCmd = &cobra.Command{

@@ -3,7 +3,7 @@ package actions
 import (
 	"context"
 	"fmt"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/storage"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/storage"
 
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/vms/platformvm/warp"

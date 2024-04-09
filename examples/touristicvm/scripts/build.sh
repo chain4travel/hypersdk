@@ -26,7 +26,7 @@ if [[ $# -eq 1 ]]; then
     BINARY_PATH=$(realpath $1)
 elif [[ $# -eq 0 ]]; then
     # Set default binary directory location
-    name="pkEmJQuTUic3dxzg8EYnktwn4W7uCHofNcwiYo458vodAUbY7"
+    name="tHBmZEZ7iLgMugQKNvCufu5G6Qh8STKgdt6aRJUAVPc72gPYc"
     BINARY_PATH=$touristicVM_PATH/build/$name
 else
     echo "Invalid arguments to build touristicvm. Requires zero (default location) or one argument to specify binary location."

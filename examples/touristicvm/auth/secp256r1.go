@@ -11,8 +11,8 @@ import (
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/crypto"
 	"github.com/ava-labs/hypersdk/crypto/secp256r1"
-	"github.com/ava-labs/hypersdk/examples/touristicvm/consts"
 	"github.com/ava-labs/hypersdk/utils"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/consts"
 )
 
 var _ chain.Auth = (*SECP256R1)(nil)

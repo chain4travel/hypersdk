@@ -7,7 +7,7 @@ import (
 	"github.com/ava-labs/avalanchego/utils/logging"
 	"github.com/ava-labs/avalanchego/vms"
 
-	"github.com/ava-labs/hypersdk/examples/touristicvm/controller"
+	"github.com/chain4travel/hypersdk/examples/touristicvm/controller"
 )
 
 var _ vms.Factory = &Factory{}

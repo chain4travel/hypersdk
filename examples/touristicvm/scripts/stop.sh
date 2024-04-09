@@ -4,4 +4,4 @@
 
 set -e
 
-killall avalanche-network-runner
+killall camino-network-runner
