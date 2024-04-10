@@ -20,8 +20,8 @@ import (
 	trpc "github.com/chain4travel/hypersdk/examples/touristicvm/rpc"
 )
 
-// sendAndWait may not be used concurrently
-func sendAndWait(
+// SendAndWait may not be used concurrently
+func SendAndWait(
 	ctx context.Context, warpMsg *warp.Message, action chain.Action, cli *rpc.JSONRPCClient,
 	ws *rpc.WebSocketClient, tCli *trpc.JSONRPCClient, factory chain.AuthFactory, printStatus bool,
 ) (bool, ids.ID, error) { //nolint:unparam

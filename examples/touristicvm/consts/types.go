@@ -7,4 +7,5 @@ const (
 	// Auth TypeIDs
 	ED25519ID   uint8 = 0
 	SECP256R1ID uint8 = 1
+	SECP256K1ID uint8 = 2
 )

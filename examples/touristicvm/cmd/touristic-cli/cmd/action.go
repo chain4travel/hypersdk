@@ -65,7 +65,7 @@ var transferCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, _, err = sendAndWait(ctx, nil, &actions.Transfer{
+		_, _, err = SendAndWait(ctx, nil, &actions.Transfer{
 			To:    recipient,
 			Value: amount,
 		}, cli, sCli, tCli, factory, true)
@@ -130,7 +130,7 @@ var createAssetCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, _, err = sendAndWait(ctx, nil, &actions.CreateAsset{
+		_, _, err = SendAndWait(ctx, nil, &actions.CreateAsset{
 			Symbol:    []byte(symbol),
 			Decimals:  uint8(decimals), // already constrain above to prevent overflow
 			Metadata:  []byte(metadata),
@@ -200,7 +200,7 @@ var mintAssetCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, _, err = sendAndWait(ctx, nil, &actions.MintAsset{
+		_, _, err = SendAndWait(ctx, nil, &actions.MintAsset{
 			Asset: assetID,
 			To:    recipient,
 			Value: amount,
@@ -252,7 +252,7 @@ var createNFTCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, _, err = sendAndWait(ctx, nil, nft, cli, scli, tcli, factory, true)
+		_, _, err = SendAndWait(ctx, nil, nft, cli, scli, tcli, factory, true)
 		return err
 	},
 }
@@ -333,7 +333,7 @@ var transferNFTCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, _, err = sendAndWait(ctx, nil, &actions.TransferNFT{
+		_, _, err = SendAndWait(ctx, nil, &actions.TransferNFT{
 			NFT: nftID,
 			To:  recipient,
 		}, cli, sCli, tCli, factory, true)
@@ -374,7 +374,7 @@ var burnNFTCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		_, _, err = sendAndWait(ctx, nil, &actions.TransferNFT{
+		_, _, err = SendAndWait(ctx, nil, &actions.TransferNFT{
 			NFT: nftID,
 			To:  codec.BlackholeAddress,
 		}, cli, sCli, tCli, factory, true)
@@ -506,7 +506,7 @@ func performImport(
 	}
 
 	// Generate transaction
-	_, _, err = sendAndWait(ctx, msg, &actions.ImportAsset{
+	_, _, err = SendAndWait(ctx, msg, &actions.ImportAsset{
 		Fill: fill,
 	}, dcli, dscli, dtcli, factory, true)
 	return err
@@ -619,7 +619,7 @@ var exportAssetCmd = &cobra.Command{
 		}
 
 		// Generate transaction
-		success, txID, err := sendAndWait(ctx, nil, &actions.ExportAsset{
+		success, txID, err := SendAndWait(ctx, nil, &actions.ExportAsset{
 			To:          recipient,
 			Asset:       assetID,
 			Value:       amount,
