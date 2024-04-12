@@ -5,9 +5,11 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	hconsts "github.com/ava-labs/hypersdk/consts"
 
 	"github.com/ava-labs/avalanchego/ids"
+	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	"github.com/ava-labs/hypersdk/chain"
 	"github.com/ava-labs/hypersdk/cli"
 	"github.com/ava-labs/hypersdk/codec"
@@ -111,6 +113,12 @@ func (h *Handler) DefaultActor() (
 		factory = auth.NewED25519Factory(ed25519.PrivateKey(priv))
 	case consts.SECP256R1ID:
 		factory = auth.NewSECP256R1Factory(secp256r1.PrivateKey(priv))
+	case consts.SECP256K1ID:
+		pk, err := secp256k1.ToPrivateKey(priv)
+		if err != nil {
+			fmt.Errorf("invalid private key %w\n", err)
+		}
+		factory = auth.NewSECP256K1Factory(*pk)
 	default:
 		return ids.Empty, nil, nil, nil, nil, nil, ErrInvalidAddress
 	}

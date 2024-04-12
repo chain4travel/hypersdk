@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/ava-labs/avalanchego/ids"
 	"github.com/ava-labs/avalanchego/utils/cb58"
+	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	"github.com/ava-labs/hypersdk/cli"
 	"github.com/ava-labs/hypersdk/codec"
 	"github.com/ava-labs/hypersdk/crypto/ed25519"
@@ -23,10 +24,11 @@ import (
 const (
 	ed25519Key   = "ed25519"
 	secp256r1Key = "secp256r1"
+	secp256k1Key = "secp256k1"
 )
 
 func checkKeyType(k string) error {
-	if k != ed25519Key && k != secp256r1Key {
+	if k != ed25519Key && k != secp256r1Key && k != secp256k1Key {
 		return fmt.Errorf("%w: %s", ErrInvalidKeyType, k)
 	}
 	return nil
@@ -89,6 +91,15 @@ func loadPrivateKey(k string, path string) (*cli.PrivateKey, error) {
 		return &cli.PrivateKey{
 			Address: auth.NewSECP256R1Address(pk.PublicKey()),
 			Bytes:   p,
+		}, nil
+	case secp256k1Key:
+		pk := new(secp256k1.PrivateKey)
+		if err := pk.UnmarshalText([]byte("\"" + path + "\"")); err != nil {
+			return nil, err
+		}
+		return &cli.PrivateKey{
+			Address: auth.NewSECP256K1Address(*pk.PublicKey()),
+			Bytes:   pk.Bytes(),
 		}, nil
 	default:
 		return nil, ErrInvalidKeyType

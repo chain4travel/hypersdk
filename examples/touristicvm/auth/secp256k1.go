@@ -61,8 +61,9 @@ func UnmarshalSECP256K1(p *codec.Packer, _ *warp.Message) (chain.Auth, error) {
 		return nil, err
 	}
 	d.Signer = *signer
-	signature := d.Signature[:] // avoid allocating additional memory
+	signature := make([]byte, secp256k1.SignatureLen) // avoid allocating additional memory
 	p.UnpackFixedBytes(secp256k1.SignatureLen, &signature)
+	d.Signature = signature
 	return &d, p.Err()
 }
 func (s *SECP256K1) Size() int {
