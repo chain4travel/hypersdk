@@ -470,6 +470,24 @@ func (vm *VM) ReadState(ctx context.Context, keys [][]byte) ([][]byte, []error) 
 	return vm.stateDB.GetValues(ctx, keys)
 }
 
+func (vm *VM) ReadStateWithPrefix(ctx context.Context, prefix []byte) ([][]byte, [][]byte, error) {
+	if !vm.isReady() {
+		// TODO@
+		// return hutils.Repeat[[]byte](nil, len(keys)), hutils.Repeat(ErrNotReady, len(keys))
+	}
+
+	keys := [][]byte{}
+	values := [][]byte{}
+	it := vm.stateDB.NewIteratorWithPrefix(prefix)
+
+	for it.Next() {
+		keys = append(keys, it.Key())
+		values = append(values, it.Value())
+	}
+
+	return keys, values, it.Error()
+}
+
 func (vm *VM) SetState(_ context.Context, state snow.State) error {
 	switch state {
 	case snow.StateSyncing:
