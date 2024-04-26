@@ -472,8 +472,7 @@ func (vm *VM) ReadState(ctx context.Context, keys [][]byte) ([][]byte, []error) 
 
 func (vm *VM) ReadStateWithPrefix(ctx context.Context, prefix []byte) ([][]byte, [][]byte, error) {
 	if !vm.isReady() {
-		// TODO@
-		// return hutils.Repeat[[]byte](nil, len(keys)), hutils.Repeat(ErrNotReady, len(keys))
+		return nil, nil, ErrNotReady
 	}
 
 	keys := [][]byte{}
